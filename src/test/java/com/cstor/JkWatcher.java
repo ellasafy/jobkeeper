@@ -54,25 +54,7 @@ public class JkWatcher implements Watcher {
 		}
 	}
 	
-	public static void main(String[] args) {
-//		PropertyConfigurator.configure("src/main/resources/log4j.properties");
-		System.setProperty("log4j.configuration", "log4j.properties");  
-		JkWatcher jk = new JkWatcher();
-		jk.releaseConnection();
-		jk.buildConnection("192.168.254.128", 10000);
-		jk.deleteNode("/jk/data");
-		jk.deleteNode("/jk");
-		jk.createNode("/jk", "jk");
-		jk.createNode("/jk/data", "jk/data");
-		try {
-			TimeUnit.MILLISECONDS.sleep(1000);
-		} catch (Exception e) {
-			
-		}
-		jk.deleteNode("/jk/data");
-		jk.deleteNode("/jk");
-		
-	}
+
 	public void process(WatchedEvent event) {
 		//get connection state
 		KeeperState state = event.getState();
@@ -92,14 +74,12 @@ public class JkWatcher implements Watcher {
 				if (null != st) {
 					LOG.info("eventPath " + eventPath + "exits " + st.toString());
 				}
-				connectedSemaphore.countDown();
 			}
 			if (EventType.NodeDataChanged == eventType) {
 				LOG.info(logPrefix + "date changed action, path : " + eventPath);
 			} 
 			if (EventType.NodeDeleted == eventType) {
 				LOG.info(logPrefix + "delete node action, path : " + eventPath);
-				connectedSemaphore.countDown();
 			}
 		} else if (KeeperState.Disconnected == state) {
 			LOG.info("disconnect from server");
@@ -136,6 +116,24 @@ public class JkWatcher implements Watcher {
 			}
 		} catch (Exception e) {
 			LOG.error("create Node comes to an error");
+		}
+	}
+	public byte[] getData(String path) {
+		byte[] data = null;
+		try {
+			data = this.zk.getData(path,true, null);
+			
+		} catch(Exception e) {
+			LOG.error("getData error + " + path, e);
+		}
+		return data;
+	}
+	
+	public void setData(String path, Object obj) {
+		try {
+			this.zk.setData(path, (byte[])obj, -1);
+		} catch (Exception e) {
+			LOG.error("setData error + " + path, e);
 		}
 	}
 	
